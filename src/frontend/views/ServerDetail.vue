@@ -226,6 +226,22 @@
     </div>
 
     <Footer />
+
+    <div id="loginRequiredModal" class="modal-overlay" :style="{ display: showLoginModal ? 'block' : 'none' }">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title">$ sudo login</div>
+          <button class="modal-close" @click="showLoginModal = false">✕</button>
+        </div>
+        <div class="modal-body" style="padding: 16px 0;">
+          <p style="color: var(--text-muted); font-size: 14px; line-height: 1.6;">{{ trans.loginRequired }}</p>
+        </div>
+        <div class="modal-footer">
+          <button @click="showLoginModal = false" class="btn" style="flex: 1;">{{ trans.cancel }}</button>
+          <button @click="goToLogin" class="btn btn-blue" style="flex: 1;">{{ trans.login }}</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -234,7 +250,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import TerminalHeader from '../components/TerminalHeader.vue'
 import Footer from '../components/Footer.vue'
-import { fetchServerDetail, fetchAllHistory, formatBytes, fetchConfig } from '../utils/api'
+import { fetchServerDetail, fetchAllHistory, formatBytes, fetchConfig, isAdminLoggedIn } from '../utils/api'
 import Chart from 'chart.js/auto'
 import 'chartjs-adapter-date-fns'
 import { t, currentLang } from '../utils/i18n'
@@ -253,28 +269,24 @@ if (!serverId) {
 }
 
 const server = ref({})
-const currentHours = ref(1)
+const currentHours = ref(0.167)
 const lastUpdateText = ref('just now')
-const oneHourDataCache = ref(null)
 const config = ref(null)
+const showLoginModal = ref(false)
 
 const trans = computed(() => translations[currentLang.value] || translations.en)
 
 const timeOptions = computed(() => {
-  const allOptions = [
+  return [
     { hours: 0.167, label: '10m' },
     { hours: 0.5, label: '30m' },
     { hours: 1, label: '1h' },
     { hours: 6, label: '6h' },
     { hours: 12, label: '12h' },
-    { hours: 24, label: '24h' }
+    { hours: 24, label: '24h' },
+    { hours: 48, label: '2d' },
+    { hours: 72, label: '3d' }
   ]
-  
-  if (config.value && !config.value.enableLongRetention) {
-    return allOptions.filter(opt => opt.hours <= 1)
-  }
-  
-  return allOptions
 })
 
 const isOnline = computed(() => {
@@ -789,26 +801,22 @@ const fetchCurrentStatus = async () => {
 }
 
 const setTimeRange = (hours) => {
+  if (hours > 1 && !isAdminLoggedIn()) {
+    showLoginModal.value = true
+    return
+  }
   currentHours.value = hours
   loadAllHistory(hours)
+}
+
+const goToLogin = () => {
+  showLoginModal.value = false
+  window.location.href = '/admin'
 }
 
 let statusTimer = null
 
 const init = async () => {
-  // 首先加载配置
-  try {
-    const fetchedConfig = await fetchConfig()
-    if (fetchedConfig) {
-      config.value = fetchedConfig
-      // 如果启用了短数据保留，默认设置为 0.167 小时
-      if (!fetchedConfig.enableLongRetention) {
-        currentHours.value = 0.167
-      }
-    }
-  } catch (e) {
-    console.error('[ERROR] 加载配置失败:', e)
-  }
 
   // 确保所有 canvas 元素都已挂载
   await nextTick()

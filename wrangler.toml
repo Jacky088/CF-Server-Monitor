@@ -18,7 +18,6 @@ binding = "ASSETS"
 [vars]
 API_SECRET = "admin"
 API_USER_NAME = "admin"
-LONG_RETENTION = "true"
 
 [[d1_databases]]
 binding = "DB"

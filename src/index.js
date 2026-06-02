@@ -10,20 +10,20 @@ import { checkAuth, authResponse, simpleAuthResponse } from './middleware/auth.j
 
 const historyCache = new Map();
 const CACHE_TTL = 60000;
-const MAX_HOURS_LONG = 24;
-const MAX_HOURS_SHORT = 1;
-
 async function fetchHistoryData(env, request, id, hours, columns) {
   if (!id) return new Response('Missing ID', { status: 400 });
   
   const isLoggedIn = checkAuth(request, env);
   const sys = await loadSettings(env.DB);
-  const enableLongRetention = env.LONG_RETENTION === 'true';
-  const maxHours = enableLongRetention ? MAX_HOURS_LONG : MAX_HOURS_SHORT;
   
   if (sys.is_public !== 'true' && !isLoggedIn) {
     return simpleAuthResponse();
   }
+  
+  if (hours > 1 && !isLoggedIn) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+  
   let query = 'SELECT id FROM servers WHERE id = ?';
   if (!isLoggedIn) {
     query += " AND (is_hidden != '1' AND is_hidden != 1)";
@@ -31,7 +31,7 @@ async function fetchHistoryData(env, request, id, hours, columns) {
   const server = await env.DB.prepare(query).bind(id).first();
   if (!server) return new Response('Not Found', { status: 404 });
   
-  const clampedHours = Math.min(hours, maxHours);
+  const clampedHours = Math.min(hours, 72);
   
   const cacheKey = `${id}_${clampedHours}_${columns}`;
   const cached = historyCache.get(cacheKey);
@@ -98,8 +98,7 @@ export default {
     }
 
     async function handleGetConfig() {
-      const enableLongRetention = env.LONG_RETENTION === 'true';
-      return new Response(JSON.stringify({ enableLongRetention }), {
+      return new Response(JSON.stringify({}), {
         headers: { 'Content-Type': 'application/json' }
       });
     }

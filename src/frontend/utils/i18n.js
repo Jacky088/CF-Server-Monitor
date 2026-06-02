@@ -151,7 +151,9 @@ const translations = reactive({
     confirmDeleteServers: '[?] Delete ',
     irreversible: ' selected servers? This action is irreversible.',
     imageSizeWarning: '[WARN] Image size > 800KB, consider using external URL',
-    enterServerName: '[WARN] Please enter a server name'
+    enterServerName: '[WARN] Please enter a server name',
+    loginRequired: 'Please log in to view historical data longer than 1 hour',
+    loginRequiredTitle: 'Login Required'
   },
   zh: {
     theme: '主题',
@@ -303,7 +305,9 @@ const translations = reactive({
     confirmDeleteServers: '[?] 确定要删除 ',
     irreversible: ' 个选中的服务器吗？此操作不可撤销。',
     imageSizeWarning: '[警告] 图片大小超过 800KB，建议使用外部链接',
-    enterServerName: '[警告] 请输入服务器名称'
+    enterServerName: '[警告] 请输入服务器名称',
+    loginRequired: '请先登录以查看1小时以上的历史数据',
+    loginRequiredTitle: '需要登录'
   }
 })
 

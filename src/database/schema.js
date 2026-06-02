@@ -1,6 +1,4 @@
 let dbInitialized = false;
-const DELETE_RAW_DATA = false; // true:删除超过1天的原始数据; false:删除超过3天的原始数据; 都不删除1天内的原始数据
-const RETENTION_DAYS = 1; // 数据保留天数
 
 export async function initDatabase(db) {
   if (dbInitialized) return;
@@ -111,16 +109,14 @@ export async function getMetricsHistory(db, serverId, hours, columns) {
 export async function cleanupOldData(db) {
   try {
     const now = Date.now();
-    const oneDay = 24 * 60 * 60 * 1000;
     const threeDays = 3 * 24 * 60 * 60 * 1000;
-    const rawRetentionDays = DELETE_RAW_DATA ? oneDay : threeDays;
     
     const stats = {
       expired: 0,
       deleted: 0
     };
     
-    const rawCutoff = now - rawRetentionDays;
+    const rawCutoff = now - threeDays;
     const intDeleteResult = await db.prepare(
       `DELETE FROM metrics_history WHERE typeof(timestamp) = 'integer' AND timestamp < ?`
     ).bind(rawCutoff).run();
