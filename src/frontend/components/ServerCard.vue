@@ -62,6 +62,10 @@
         <span class="net-down">▼ {{ totalRx }}</span>
         <span class="net-up">▲ {{ totalTx }}</span>
       </div>
+      <div class="stat-row stat-time-row">
+        <span class="stat-key">TIME</span>
+        <span class="stat-time-value">{{ dataTimeText }}</span>
+      </div>
     </div>
     <div class="ping-panel">
       <div class="ping-item">
@@ -113,13 +117,20 @@ const props = defineProps({
 
 const trans = computed(() => translations[currentLang.value] || translations.en)
 
-const now = Date.now()
+const currentTime = computed(() => {
+  const ts = Number(props.server.current_timestamp)
+  if (Number.isFinite(ts) && ts > 0) {
+    return ts < 10000000000 ? ts * 1000 : ts
+  }
+  return Date.now()
+})
 
 const regionCode = computed(() => getFlagRegionCode(props.server.region))
 
 const isOnline = computed(() => {
-  const lastUpdated = new Date(props.server.last_updated).getTime()
-  return (now - lastUpdated) < TIME.ONLINE_THRESHOLD_MS
+  const lastUpdated = normalizeTimestamp(props.server.report_timestamp ?? props.server.last_updated)
+  if (!lastUpdated) return false
+  return (currentTime.value - lastUpdated) < TIME.ONLINE_THRESHOLD_MS
 })
 
 const statusColor = computed(() => isOnline.value ? 'var(--accent-green)' : 'var(--accent-red)')
@@ -164,15 +175,48 @@ const netOutSpeed = computed(() => formatBytes(props.server.net_out_speed))
 const totalRx = computed(() => formatBytes(props.server.net_rx))
 const totalTx = computed(() => formatBytes(props.server.net_tx))
 
+const normalizeTimestamp = (value) => {
+  if (value === null || value === undefined || value === '') return null
+  const numeric = Number(value)
+  if (Number.isFinite(numeric) && numeric > 0) {
+    return numeric < 10000000000 ? numeric * 1000 : numeric
+  }
+  const parsed = new Date(value).getTime()
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+}
+
+const formatDateTime = (timestamp) => {
+  if (!timestamp) return '-'
+  const date = new Date(timestamp)
+  const pad = (num) => String(num).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
+
+const dataTimeText = computed(() => {
+  const reportTimestamp = normalizeTimestamp(props.server.report_timestamp ?? props.server.last_updated)
+  if (!isOnline.value) return formatDateTime(reportTimestamp)
+
+  const displayTimestamp = normalizeTimestamp(
+    props.server.display_timestamp ?? props.server.sample_timestamp ?? props.server.timestamp ?? reportTimestamp
+  )
+  const sampleTimestamp = normalizeTimestamp(
+    props.server.sample_timestamp ?? props.server.timestamp ?? displayTimestamp
+  )
+  const lagSeconds = displayTimestamp && sampleTimestamp
+    ? Math.max(0, Math.floor((displayTimestamp - sampleTimestamp) / 1000))
+    : 0
+  return `${formatDateTime(sampleTimestamp)}${lagSeconds > 0 ? ` (+${lagSeconds}s)` : ''}`
+})
+
 const isExpired = computed(() => {
   const expTime = new Date(props.server.expire_date).getTime()
-  return !isNaN(expTime) && expTime < now
+  return !isNaN(expTime) && expTime < currentTime.value
 })
 
 const expireText = computed(() => {
   const expTime = new Date(props.server.expire_date).getTime()
   if (isNaN(expTime)) return ''
-  const diff = expTime - now
+  const diff = expTime - currentTime.value
   const days = Math.ceil(diff / (1000 * 3600 * 24))
   return days > 0 ? `${days}${trans.value.expireDays}` : trans.value.expired
 })

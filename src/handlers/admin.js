@@ -6,6 +6,7 @@ import { clearSiteSettingsCache, saveSiteOptions } from '../utils/settings.js';
 import { mergeMetricsIntoServer } from '../utils/metrics.js';
 import { verifyTurnstileToken, md5Hash } from '../utils/common.js';
 import { AppError, createSuccessResponse, createBadRequestResponse, createUnauthorizedResponse, createErrorResponse } from '../utils/errors.js';
+import { addServerColumns } from '../database/updateDatabase.js';
 
 function isValidUUID(id) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
@@ -18,6 +19,12 @@ function isValidName(name) {
 const D1_DAILY_READ_LIMIT = 5000000;
 const D1_DAILY_WRITE_LIMIT = 100000;
 const WORKERS_DAILY_REQUEST_LIMIT = 100000;
+
+function normalizeInterval(value, fallback, min = 1, max = 86400) {
+  const num = parseInt(value, 10);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.max(min, Math.min(max, num));
+}
 
 function getUtcTodayRange() {
   const now = new Date();
@@ -397,16 +404,18 @@ export async function handleAdminAPI(request, env, sys) {
       });
     }
     else if (data.action === 'edit') {
-      const { id, name, server_group, price, expire_date, bandwidth, traffic_limit, traffic_calc_type, reset_day, report_interval, ping_mode, is_hidden } = data;
+      const { id, name, server_group, price, expire_date, bandwidth, traffic_limit, traffic_calc_type, reset_day, collect_interval, report_interval, ping_mode, is_hidden } = data;
       if (!id || !isValidUUID(id)) {
         return createBadRequestResponse('服务器 ID 无效');
       }
+      const normalizedCollectInterval = normalizeInterval(collect_interval, 0, 0);
+      const normalizedReportInterval = Math.max(normalizedCollectInterval, normalizeInterval(report_interval, 60));
       
       try {
         if (name && typeof name === 'string' && name.trim().length > 0 && name.length <= 100) {
           await env.DB.prepare(`
             UPDATE servers 
-            SET name = ?, server_group = ?, price = ?, expire_date = ?, bandwidth = ?, traffic_limit = ?, traffic_calc_type = ?, reset_day = ?, report_interval = ?, ping_mode = ?, is_hidden = ? 
+            SET name = ?, server_group = ?, price = ?, expire_date = ?, bandwidth = ?, traffic_limit = ?, traffic_calc_type = ?, reset_day = ?, collect_interval = ?, report_interval = ?, ping_mode = ?, is_hidden = ?
             WHERE id = ?
           `).bind(
             name,
@@ -417,7 +426,8 @@ export async function handleAdminAPI(request, env, sys) {
             traffic_limit || '',
             traffic_calc_type || 'total',
             reset_day !== undefined && reset_day !== null && reset_day !== '' ? reset_day : 1,
-            report_interval || 60,
+            normalizedCollectInterval,
+            normalizedReportInterval,
             ping_mode || 'http',
             is_hidden || '0',
             id
@@ -425,7 +435,7 @@ export async function handleAdminAPI(request, env, sys) {
         } else {
           await env.DB.prepare(`
             UPDATE servers 
-            SET server_group = ?, price = ?, expire_date = ?, bandwidth = ?, traffic_limit = ?, traffic_calc_type = ?, reset_day = ?, report_interval = ?, ping_mode = ?, is_hidden = ? 
+            SET server_group = ?, price = ?, expire_date = ?, bandwidth = ?, traffic_limit = ?, traffic_calc_type = ?, reset_day = ?, collect_interval = ?, report_interval = ?, ping_mode = ?, is_hidden = ?
             WHERE id = ?
           `).bind(
             server_group || 'Default', 
@@ -435,15 +445,22 @@ export async function handleAdminAPI(request, env, sys) {
             traffic_limit || '',
             traffic_calc_type || 'total',
             reset_day !== undefined && reset_day !== null && reset_day !== '' ? reset_day : 1,
-            report_interval || 60,
+            normalizedCollectInterval,
+            normalizedReportInterval,
             ping_mode || 'http',
             is_hidden || '0',
             id
           ).run();
         }
       } catch (e) {
-        console.error('Edit server error:', e);
-        return createErrorResponse(new Error('Update failed. Please go to Database Management and click "Upgrade Database" to migrate the new field.'));
+        if (e.message && /no such column/i.test(e.message)) {
+          console.warn('检测到数据库字段缺失，尝试添加缺失字段...');
+          await addServerColumns(env.DB);
+          return createBadRequestResponse('数据库字段缺失，已添加缺失字段,请再次点击保存');
+        }else{
+          const errMsg = e?.message || String(e);
+          return createBadRequestResponse(errMsg || '保存失败');
+        }
       }
       
       clearServersListCache();

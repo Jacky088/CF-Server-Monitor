@@ -74,7 +74,7 @@ async function migrateLoadToLoadAvg(db) {
   }
 }
 
-async function addServerColumns(db) {
+export async function addServerColumns(db) {
   try {
     const { results: columns } = await db.prepare(`PRAGMA table_info(servers)`).all();
     const existingCols = columns.map(c => c.name);
@@ -83,6 +83,7 @@ async function addServerColumns(db) {
       is_hidden: "TEXT DEFAULT '0'",
       sort_order: "INTEGER DEFAULT 0",
       reset_day: "INTEGER DEFAULT 1",
+      collect_interval: "INTEGER DEFAULT 0",
       report_interval: "INTEGER DEFAULT 60",
       ping_mode: "TEXT DEFAULT 'http'",
       traffic_calc_type: "TEXT DEFAULT 'total'"
