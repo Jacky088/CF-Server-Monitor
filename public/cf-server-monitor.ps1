@@ -129,7 +129,6 @@ function Load-Config {
     if (Test-Path $CONFIG_FILE) {
         try {
             $content = Get-Content $CONFIG_FILE -Raw -Encoding UTF8
-            Write-Log "配置文件内容长度: $($content.Length) 字符" "DEBUG"
             $raw = $content | ConvertFrom-Json
             Write-Log "配置文件加载成功" "INFO"
             # 清理 URL
@@ -281,7 +280,6 @@ function Get-NetworkStats {
                     $totalTx += [long]$adapter.SentBytes
                 } catch {}
             }
-            Write-Log "网络流量: RX=$totalRx TX=$totalTx" "DEBUG"
             return @{ rx = $totalRx; tx = $totalTx }
         }
     } catch {}
@@ -400,7 +398,6 @@ function Get-Ping {
     }
     if ($PingType -eq "http") { 
         $result = Get-HttpPing -TargetHost $TargetHost
-        Write-Log "Get-Ping: HTTP 结果 = $result" "DEBUG"
         return $result
     }
     $result = Get-TcpPing -TargetHost $TargetHost
@@ -847,7 +844,6 @@ function Invoke-CollectLoop {
                 $lastPingCheck = $now
                 $existingJob = Get-Job -Name "CFProbePingJob" -ErrorAction SilentlyContinue
                 if (-not $existingJob -or $existingJob.State -eq "Completed") {
-                    Write-Log "启动异步 Ping 检测..." "DEBUG"
                     Remove-PingBackgroundJob
                     Start-PingBackgroundJob -CtNode $ctNode -CuNode $cuNode -CmNode $cmNode -BdNode $bdNode -PingType $pingType -TempFile $pingTempFile
                 }
@@ -864,8 +860,6 @@ function Invoke-CollectLoop {
                 $lossCu = if ($pingResults.cu_loss) { $pingResults.cu_loss } else { $lossCu }
                 $lossCm = if ($pingResults.cm_loss) { $pingResults.cm_loss } else { $lossCm }
                 $lossBd = if ($pingResults.bd_loss) { $pingResults.bd_loss } else { $lossBd }
-                Write-Log "Ping 结果: CT=$pingCt, CU=$pingCu, CM=$pingCm, BD=$pingBd" "DEBUG"
-                Write-Log "丢包结果: CT=$lossCt, CU=$lossCu, CM=$lossCm, BD=$lossBd" "DEBUG"
             }
 
             # CPU
@@ -964,7 +958,6 @@ function Invoke-CollectLoop {
                 $json = $payload | ConvertTo-Json -Depth 10 -Compress
                 try {
                     $null = Invoke-RestMethod -Uri $workerUrl -Method Post -Body $json -ContentType "application/json; charset=utf-8" -TimeoutSec 4 -ErrorAction Stop
-                    Write-Log "上报成功"
                 } catch {
                     Write-Log "上报失败: $_" "WARN"
                 }

@@ -255,6 +255,35 @@ curl -sL https://你的项目.你的子域.workers.dev/install-openwrt.sh | sh -
 
 ### Windows 系统安装
 
+#### PowerShell 版（推荐，零依赖）
+
+无需安装任何依赖，纯 PowerShell 实现，功能完整。
+
+##### 下载探针脚本
+
+[cf-server-monitor.ps1](public/cf-server-monitor.ps1)
+
+##### 运行方式
+
+**1. 直接运行（前台调试）** 后台复制安装命令即可
+
+```powershell
+irm https://你的项目.你的子域.workers.dev/cf-server-monitor.ps1 -OutFile cf-server-monitor.ps1; powershell -ExecutionPolicy Bypass -File .\cf-server-monitor.ps1 -Id <SERVER_ID> -Secret <SECRET> -Url <WORKER_URL> [-ReportInterval=60] [-PingType=tcp] [-CtNode=xxx] [-CuNode=xxx] [-CmNode=xxx] [-BdNode=xxx] [-ResetDay=1]
+```
+
+**3. 其他命令**
+
+```powershell
+# 停止探针
+powershell -ExecutionPolicy Bypass -File .\cf-server-monitor.ps1 stop
+
+# 查看状态
+powershell -ExecutionPolicy Bypass -File .\cf-server-monitor.ps1 status
+
+# 卸载服务
+powershell -ExecutionPolicy Bypass -File .\cf-server-monitor.ps1 uninstall
+```
+
 #### Python 版（带 GUI 界面）
 
 如需图形界面管理，使用 Python 版本：
@@ -270,8 +299,6 @@ curl -sL https://你的项目.你的子域.workers.dev/install-openwrt.sh | sh -
 ##### 运行探针
 
 双击`cf-server-monitor.pyw`文件即可启动探针。
-
-#### PowerShell 版（推荐，零依赖）(开发中)
 
 ### 参数说明
 

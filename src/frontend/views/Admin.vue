@@ -1359,7 +1359,7 @@ const copyCmd = (serverId) => {
 const getCustomInstallCommand = () => {
   const HOST = getApiBases()[0]
   if (targetOs.value === 'windows') {
-    return `${HOST}/cf-server-monitor.pyw`
+    // return `${HOST}/cf-server-monitor.pyw`
     const params = [
       'install',
       `-Id '${copyServerId.value}'`,
@@ -1377,7 +1377,6 @@ const getCustomInstallCommand = () => {
     if (rxCorrection.value && rxCorrection.value !== '') params.push(`-RxCorrection ${rxCorrection.value}`)
     if (txCorrection.value && txCorrection.value !== '') params.push(`-TxCorrection ${txCorrection.value}`)
     return `irm ${HOST}/cf-server-monitor.ps1 -OutFile cf-server-monitor.ps1; powershell -ExecutionPolicy Bypass -File .\\cf-server-monitor.ps1 ${params.join(' ')}`
-    // powershell -ExecutionPolicy Bypass -File .\cf-server-monitor.ps1 install -Id "id" -Secret "xxx" -Url "https://tz.huilang.me/update" -CollectInterval 0 -ReportInterval 30 -PingType tcp -ResetDay 1 -CtNode gd-ct-dualstack.ip.zstaticcdn.com -CuNode gd-cu-dualstack.ip.zstaticcdn.com -CmNode gd-cm-dualstack.ip.zstaticcdn.com -BdNode lf3-ips.zstaticcdn.com
   }
   const shell = targetOs.value === 'alpine' || targetOs.value === 'openwrt' ? 'sh' : 'bash'
   const script = targetOs.value === 'alpine' ? 'install-alpine.sh'
