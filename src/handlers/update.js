@@ -136,7 +136,7 @@ export async function handleUpdate(request, env, ctx) {
 
     let regionCode = request.cf?.country || request.headers?.get('cf-ipcountry') || '';
 
-    const serverDetail = await getServerDetail(env.DB, id);
+    const serverDetail = await getServerDetail(env.DB, id, true);
 
     if (!serverDetail) {
       return createNotFoundResponse('Server not found');

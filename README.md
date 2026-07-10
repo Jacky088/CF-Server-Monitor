@@ -13,30 +13,10 @@
 > 
 > **👉 请所有用户务必立即升级！**
 
-<2.7.1 新增了功能，需要**升级安装脚本** 才能生效，否则无法获取丢包率
-```
-# Linux
-curl -sL https://你的项目.你的子域.workers.dev/install.sh | bash -s install
-# Alpine
-curl -sL https://你的项目.你的子域.workers.dev/install-alpine.sh | sh -s install
-# OpenWrt
-curl -sL https://你的项目.你的子域.workers.dev/install-openwrt.sh | sh -s install
-```
-<= 2.6.9 版本,使用方式一部署方式，需要在Workers & Pages页面，点击 **Settings**，修改Build configuration的Deploy command为：`npx wrangler deploy --keep-vars`，否则会导致API\_SECRET丢失。旧key可用通过
-```
-# Linux
-cat /etc/systemd/system/cf-probe.service
-# OpenWrt,Alpine
-cat /etc/init.d/cf-probe
-# >2.6.9版本
-cat /etc/config/cf-probe/config.conf
-```
-获取，再重新设置环境变量API\_SECRET（注意是设置顶部的变量和密钥），最后再同步数据。
-
 <details>
 <summary>更新记录</summary>
 
-- V2.7.9 Beta 修改数据库结构，减少一半D1写入消耗，其他bug修复
+- V2.7.9 Beta 修改数据库结构，减少一半D1写入消耗，理论上支持60+服务器监控，其他bug修复
 - V2.7.8 修复月度任务导致数据表索引丢失的严重 Bug
 - V2.7.7 添加GitHub Page部署支持，添加飞书，Bark通知支持
 - V2.7.6 添加多站点支持包括验证码登录等，添加Windows PowerShell无依赖安装脚本，一些安全优化
@@ -652,7 +632,7 @@ CF-Server-Monitor/
 
 Cloudflare D1 免费版提供 5GB 存储和 5M 读取行/日、100K 写入行/日，足以支持服务器监控。
 
-写入行：1台服务器一天占用写入行是2.88k，免费写入额度是100k/天，理论上可用支持34台服务器的监控，如果修改上报频率为120秒可用翻倍。
+写入行：1台服务器一天占用写入行是1.44k，免费写入额度是100k/天，理论上可用支持60+服务器的监控，如果修改上报频率为120秒可用翻倍。
 
 读取行：1台服务器一天占用读行是8k左右，如果开启站点兼容，大概是1.6k，免费读行是5M/天，非常充裕
 主要是前端访问消耗的次数，限制了非登录用户1小时以上的查看，只要不被暴力刷额度，绝对够用，如果不放心，可用在后台开启Turnstile人机验证，或者也可以选择仅登录查看

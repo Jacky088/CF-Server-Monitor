@@ -31,34 +31,36 @@ export function getCacheDuration(hours) {
   }
 }
 
+function filterServersByHidden(servers, includeHidden) {
+  if (!servers || servers.length === 0) return [];
+  if (includeHidden) {
+    return [...servers];
+  }
+  return servers.filter(s => s.is_hidden !== 1 && s.is_hidden !== '1');
+}
+
 export async function getAllServers(db, includeHidden = true) {
-  const cacheKey = includeHidden ? 'all' : 'visible';
   const now = Date.now();
   
-  if (serversListCache && serversListCache.cacheKey === cacheKey && now - serversListCache.time < SERVERS_LIST_TTL) {
+  if (serversListCache && now - serversListCache.time < SERVERS_LIST_TTL) {
     debug('服务器列表缓存命中');
-    return serversListCache.data;
+    return filterServersByHidden(serversListCache.data, includeHidden);
   }
 
   try {
-    let query = 'SELECT * FROM servers ORDER BY sort_order ASC';
-    if (!includeHidden) {
-      query = "SELECT * FROM servers WHERE (is_hidden != '1' AND is_hidden != 1) ORDER BY sort_order ASC";
-    }
-    const { results } = await db.prepare(query).all();
-    serversListCache = { data: results, time: now, cacheKey };
+    const { results } = await db.prepare('SELECT * FROM servers ORDER BY sort_order ASC').all();
+    serversListCache = { data: results, time: now };
     debug('服务器列表缓存更新');
-    return results;
+    return filterServersByHidden(results, includeHidden);
   } catch (e) {
     debug('获取服务器列表失败:', e);
-    return serversListCache && serversListCache.cacheKey === cacheKey ? serversListCache.data : [];
+    return filterServersByHidden(serversListCache?.data, includeHidden);
   }
 }
 
 export function clearServersListCache() {
   serversListCache = null;
 }
-
 
 export async function getServerDetail(db, id, includeHidden = false) {
   const servers = await getAllServers(db, includeHidden);

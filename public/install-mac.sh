@@ -802,7 +802,7 @@ EOF
 EOF
 )
         fi
-        curl -sk -o /dev/null -X POST -H "Content-Type: application/json" -d "${PAYLOAD}" -m 4 --connect-timeout 2 "${WORKER_URL}" 2>/dev/null || true
+        curl -sk -o /dev/null -X POST -H "Content-Type: application/json" -d "${PAYLOAD}" -m 10 --connect-timeout 5 "${WORKER_URL}" 2>/dev/null || true
         SAMPLES_JSON=""
         SAMPLE_COUNT=0
         LAST_REPORT_TIME="${LOOP_START_TIME}"
